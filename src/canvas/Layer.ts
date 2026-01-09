@@ -354,8 +354,28 @@ export default class Layer extends Eventful {
         return (this._paintRects || []).slice();
     }
 
-    resize(width: number, height: number) {
-        const dpr = this.dpr;
+    /**
+     * Update dpr and keep context markers in sync.
+     * Returns true if dpr changed.
+     */
+    updateDpr(dpr?: number): boolean {
+        if (dpr != null && dpr !== this.dpr) {
+            this.dpr = dpr;
+            // Keep a custom dpr marker in sync for downstream brush logic.
+            if (this.ctx) {
+                (this.ctx as ZRCanvasRenderingContext).dpr = dpr;
+            }
+            if (this.ctxBack) {
+                (this.ctxBack as ZRCanvasRenderingContext).dpr = dpr;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    resize(width: number, height: number, dpr?: number) {
+        this.updateDpr(dpr);
+        dpr = this.dpr;
 
         const dom = this.dom;
         const domStyle = dom.style;

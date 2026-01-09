@@ -838,8 +838,14 @@ export default class CanvasPainter implements PainterBase {
      */
     resize(
         width?: number | string,
-        height?: number | string
+        height?: number | string,
+        devicePixelRatio?: number
     ) {
+        const dprChanged = devicePixelRatio != null && devicePixelRatio !== this.dpr;
+        if (dprChanged) {
+            this.dpr = devicePixelRatio;
+        }
+
         if (!this._domRoot.style) { // Maybe in node or worker
             if (width == null || height == null) {
                 return;
@@ -848,7 +854,7 @@ export default class CanvasPainter implements PainterBase {
             this._width = width as number;
             this._height = height as number;
 
-            this.getLayer(CANVAS_ZLEVEL).resize(width as number, height as number);
+            this.getLayer(CANVAS_ZLEVEL).resize(width as number, height as number, this.dpr);
         }
         else {
             const domRoot = this._domRoot;
@@ -867,13 +873,13 @@ export default class CanvasPainter implements PainterBase {
             domRoot.style.display = '';
 
             // 优化没有实际改变的resize
-            if (this._width !== width || height !== this._height) {
+            if (this._width !== width || height !== this._height || dprChanged) {
                 domRoot.style.width = width + 'px';
                 domRoot.style.height = height + 'px';
 
                 for (let id in this._layers) {
                     if (this._layers.hasOwnProperty(id)) {
-                        this._layers[id].resize(width, height);
+                        this._layers[id].resize(width, height, this.dpr);
                     }
                 }
 

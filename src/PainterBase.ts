@@ -19,7 +19,7 @@ export interface PainterBase {
 
     // constructor(dom: HTMLElement, storage: Storage, opts: PainterOption, id: number): void
 
-    resize(width?: number | string, height?: number | string): void
+    resize(width?: number | string, height?: number | string, devicePixelRatio?: number): void
     refresh(): void
     clear(): void
 
