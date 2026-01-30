@@ -1,4 +1,4 @@
-import {devicePixelRatio} from '../config';
+import { devicePixelRatio, getDevicePixelRatio } from '../config';
 import * as util from '../core/util';
 import Layer, { LayerConfig } from './Layer';
 import requestAnimationFrame from '../animation/requestAnimationFrame';
@@ -835,15 +835,22 @@ export default class CanvasPainter implements PainterBase {
 
     /**
      * 区域大小变化后重绘
+     * @param width 宽度
+     * @param height 高度
+     * @param devicePixelRatio 设备像素比，如果未指定，则自动获取当前设备像素比
      */
     resize(
         width?: number | string,
         height?: number | string,
         devicePixelRatio?: number
     ) {
-        const dprChanged = devicePixelRatio != null && devicePixelRatio !== this.dpr;
+        const newDpr = devicePixelRatio != null
+            ? devicePixelRatio
+            : getDevicePixelRatio();
+
+        const dprChanged = newDpr !== this.dpr;
         if (dprChanged) {
-            this.dpr = devicePixelRatio;
+            this.dpr = newDpr;
         }
 
         if (!this._domRoot.style) { // Maybe in node or worker
