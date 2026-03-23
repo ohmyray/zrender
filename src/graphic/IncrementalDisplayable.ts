@@ -11,6 +11,7 @@ import Displayble from './Displayable';
 import BoundingRect from '../core/BoundingRect';
 import { MatrixArray } from '../core/matrix';
 import Group from './Group';
+import { INCREMENTAL_ID_TRUE_COMPAT } from '../core/types';
 
 const m: MatrixArray = [];
 // TODO Style override ?
@@ -19,7 +20,7 @@ export default class IncrementalDisplayable extends Displayble {
 
     notClear: boolean = true
 
-    incremental = true
+    incremental = INCREMENTAL_ID_TRUE_COMPAT
 
     private _displayables: Displayble[] = []
     private _temporaryDisplayables: Displayble[] = []

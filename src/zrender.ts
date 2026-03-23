@@ -81,7 +81,8 @@ class ZRender {
     private _stillFrameAccum = 0;
 
     private _needsRefresh = true
-    private _needsRefreshHover = true
+    // true can lead to creating a hover layer. Do not set true unless required.
+    private _needsRefreshHover = false
     private _disposed: boolean;
     /**
      * If theme is dark mode. It will determine the color strategy for labels.
@@ -262,6 +263,7 @@ class ZRender {
         if (this._disposed) {
             return;
         }
+
         this._needsRefresh = true;
         // Active the animation again.
         this.animation.start();
@@ -283,6 +285,7 @@ class ZRender {
         const start = getTime();
         const needsRefresh = this._needsRefresh;
         const needsRefreshHover = this._needsRefreshHover;
+
         if (needsRefresh || needsRefreshHover) {
             triggerRendered = true;
             this._refresh({

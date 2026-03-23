@@ -1,4 +1,4 @@
-import Displayable, { DEFAULT_COMMON_STYLE } from '../graphic/Displayable';
+import Displayable, { BeforeBrushParam, DEFAULT_COMMON_STYLE } from '../graphic/Displayable';
 import PathProxy from '../core/PathProxy';
 import { GradientObject } from '../graphic/Gradient';
 import { ImagePatternObject, InnerImagePatternObject } from '../graphic/Pattern';
@@ -578,6 +578,8 @@ export type BrushScope = {
     batchStroke?: boolean
 
     lastDrawType?: number
+
+    beforeBrushParam: BeforeBrushParam
 }
 
 // If path can be batched
@@ -615,7 +617,7 @@ function flushPathDrawn(ctx: CanvasRenderingContext2D, scope: BrushScope) {
 }
 
 export function brushSingle(ctx: CanvasRenderingContext2D, el: Displayable) {
-    const scope = { inHover: false, viewWidth: 0, viewHeight: 0 };
+    const scope = { inHover: false, viewWidth: 0, viewHeight: 0, beforeBrushParam: {} };
     brush(ctx, el, scope);
     brushLoopFinalize(ctx, scope);
 }
@@ -698,7 +700,7 @@ export function brush(
     }
 
     // START BRUSH
-    el.beforeBrush && el.beforeBrush();
+    el.beforeBrush && el.beforeBrush(scope.beforeBrushParam);
     el.innerBeforeBrush();
 
     const prevEl = scope.prevEl;
@@ -820,14 +822,15 @@ function brushIncremental(
         allClipped: false,
         viewWidth: scope.viewWidth,
         viewHeight: scope.viewHeight,
-        inHover: scope.inHover
+        inHover: scope.inHover,
+        beforeBrushParam: {}
     };
     let i;
     let len;
     // Render persistant displayables.
     for (i = el.getCursor(), len = displayables.length; i < len; i++) {
         const displayable = displayables[i];
-        displayable.beforeBrush && displayable.beforeBrush();
+        displayable.beforeBrush && displayable.beforeBrush(scope.beforeBrushParam);
         displayable.innerBeforeBrush();
         brush(ctx, displayable, innerScope);
         displayable.innerAfterBrush();
@@ -838,7 +841,7 @@ function brushIncremental(
     // Render temporary displayables.
     for (let i = 0, len = temporalDisplayables.length; i < len; i++) {
         const displayable = temporalDisplayables[i];
-        displayable.beforeBrush && displayable.beforeBrush();
+        displayable.beforeBrush && displayable.beforeBrush(scope.beforeBrushParam);
         displayable.innerBeforeBrush();
         brush(ctx, displayable, innerScope);
         displayable.innerAfterBrush();

@@ -50,10 +50,15 @@ const protoKey = '__proto__';
 
 let idStart = 0x0907;
 
+const MAX_SAFE_INTEGER = Math.pow(2, 53) - 1;
+
 /**
  * Generate unique id
  */
 export function guid(): number {
+    if (idStart >= MAX_SAFE_INTEGER) {
+        idStart = 0;
+    }
     return idStart++;
 }
 

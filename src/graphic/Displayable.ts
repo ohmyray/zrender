@@ -7,7 +7,7 @@ import Element, {
     IN_HOVER_LAYER_KIND_ONLY_STYLE_CHANGE,
 } from '../Element';
 import BoundingRect from '../core/BoundingRect';
-import { PropType, Dictionary, MapToType } from '../core/types';
+import { PropType, Dictionary, MapToType, IncrementalIdCompat } from '../core/types';
 import Path from './Path';
 import { keys, extend, createObject } from '../core/util';
 import Animator from '../animation/Animator';
@@ -67,7 +67,7 @@ export interface DisplayableProps extends ElementProps {
 
     progressive?: boolean
 
-    incremental?: boolean
+    incremental?: Displayable['incremental']
 
     ignoreCoarsePointer?: boolean
 
@@ -83,6 +83,12 @@ export type DisplayableState = Pick<DisplayableProps, DisplayableStatePropNames>
 
 const PRIMARY_STATES_KEYS = ['z', 'z2', 'invisible'] as const;
 const PRIMARY_STATES_KEYS_IN_HOVER_LAYER = ['invisible'] as const;
+
+export interface BeforeBrushParam {
+    // [EXPERIMENTAL]
+    // true means the layer is not cleared before this run of brush().
+    contentRetained?: boolean
+}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface Displayable<Props extends DisplayableProps = DisplayableProps> {
@@ -128,17 +134,46 @@ class Displayable<Props extends DisplayableProps = DisplayableProps> extends Ele
      */
     rectHover: boolean
 
-    /**
-     * For increamental rendering
-     */
-    incremental: boolean
+    incremental: IncrementalIdCompat
 
     /**
-     * For an incremental element, it can prevent its incremental layer
-     * from clearing. Only the first incremental element on a layer can
-     * use `notClear`.
+     * For an incremental element.
+     * `true` can prevent its incremental layer from clearing even when `REDRAW_BIT` is set.
+     * `false` is the normal behavior as other elements - can clear when `REDRAW_BIT` is set.
+     *
+     * NOTICE: The layer may be still cleared if marked as dirty by other incremental elements
+     * sharing the same layer. Therefore, `contentRetained` is used in indicate whether the
+     * content is retained, which enable the element to reset its internal draw index.
+     *
+     * Typical usage:
+     *  ```
+     *  class LargePath extends Path {
+     *      reset() {
+     *          this._idx = 0;
+     *          this.notClear = false;
+     *      }
+     *      beforeBrush(param) {
+     *          if (!param.contentRetained) { this.reset(); }
+     *      }
+     *      buildPath() {
+     *          for (this._idx; this._idx < this.shape.points.length; this._idx++) {
+     *              // draw
+     *          }
+     *          this.notClear = true;
+     *      }
+     *  }
+     *  function incrementalUpdate(el, incrementalPoints) {
+     *      const allPoints = mergePoints(el.shape.points, incrementalPoints);
+     *      el.setShape({points: allPoints});
+     *      // The REDRAW_BIT is set but need to retain the rendered content.
+     *  }
+     *  ```
      */
     notClear?: boolean
+    /**
+     * See `notClear`
+     */
+    __layerCleared?: boolean
 
     /**
      * Never increase to target size
@@ -200,7 +235,7 @@ class Displayable<Props extends DisplayableProps = DisplayableProps> extends Ele
     }
 
     // Hook provided to developers.
-    beforeBrush() {}
+    beforeBrush(param: BeforeBrushParam) {}
     afterBrush() {}
 
     // Hook provided to inherited classes.
@@ -629,7 +664,7 @@ class Displayable<Props extends DisplayableProps = DisplayableProps> extends Ele
         dispProto.culling = false;
         dispProto.cursor = 'pointer';
         dispProto.rectHover = false;
-        dispProto.incremental = false;
+        dispProto.incremental = 0;
         dispProto._rect = null;
         dispProto.dirtyRectTolerance = 0;
 
