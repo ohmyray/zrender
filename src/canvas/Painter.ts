@@ -79,6 +79,20 @@ function createRoot(width: number, height: number) {
     return domRoot;
 }
 
+function createBuiltinLayer(
+    id: string | HTMLCanvasElement,
+    painter: CanvasPainter,
+    zlevel: ZLevel,
+    zlevel2: ZLevel2
+): Layer {
+    const layer = new Layer(id, painter, painter.dpr);
+    layer.zlevel = zlevel;
+    layer.zlevel2 = zlevel2;
+    layer.__builtin__ = true;
+    resetLayerDrawCursors(layer);
+    return layer;
+}
+
 interface CanvasPainterOption {
     devicePixelRatio?: number
     width?: number | string  // Can be 10 / 10px / auto
@@ -241,7 +255,7 @@ export default class CanvasPainter implements PainterBase {
 
         this.type = 'canvas';
 
-        const internal: CanvasPainterInternal = this._i = {
+        this._i = {
             layerStack: [],
             layers: [],
         };
@@ -302,15 +316,11 @@ export default class CanvasPainter implements PainterBase {
 
             // Create layer if only one given canvas
             // Device can be specified to create a high dpi image.
-            const mainLayer = new Layer(rootCanvas, this, this.dpr);
-            mainLayer.__builtin__ = true;
-            mainLayer.initContext();
+            const singleLayer = createBuiltinLayer(rootCanvas, this, CANVAS_ZLEVEL, ZLEVEL2_NORMAL_BELOW);
+            singleLayer.initContext();
             // FIXME Use canvas width and height
-            // mainLayer.resize(width, height);
-            ensureLayerListInZLevel(internal, CANVAS_ZLEVEL)[0] = mainLayer;
-            mainLayer.zlevel = CANVAS_ZLEVEL;
-            // Not use common zlevel.
-            internal.layerStack.push({zl: CANVAS_ZLEVEL, zl2: 0});
+            // singleLayer.resize(width, height);
+            this._insertLayer(singleLayer, CANVAS_ZLEVEL, ZLEVEL2_NORMAL_BELOW, true);
 
             this._domRoot = root;
         }
@@ -703,12 +713,7 @@ export default class CanvasPainter implements PainterBase {
         let layer = ensureLayerListInZLevel(this._i, zlevel)[zlevel2];
 
         if (!layer) {
-            // Create a new layer
-            layer = new Layer('zr_' + zlevel + '.' + zlevel2, this, this.dpr);
-            layer.zlevel = zlevel;
-            layer.zlevel2 = zlevel2;
-            layer.__builtin__ = true;
-            resetLayerDrawCursors(layer);
+            layer = createBuiltinLayer('zr_' + zlevel + '.' + zlevel2, this, zlevel, zlevel2);
 
             if (this._layerConfig[zlevel]) {
                 util.merge(layer, this._layerConfig[zlevel], true);
@@ -720,7 +725,7 @@ export default class CanvasPainter implements PainterBase {
                 layer.virtual = true;
             }
 
-            this._insertLayer(layer, zlevel, zlevel2);
+            this._insertLayer(layer, zlevel, zlevel2, false);
 
             // Context is created after dom inserted to document
             // Or excanvas will get 0px clientWidth and clientHeight
@@ -735,10 +740,15 @@ export default class CanvasPainter implements PainterBase {
      * e.g., insert a webGL layer by echarts-gl.
      */
     insertLayer(zlevel: ZLevel, layer: Layer) {
-        this._insertLayer(layer, zlevel, 0);
+        this._insertLayer(layer, zlevel, 0, false);
     }
 
-    private _insertLayer(layer: Layer, zlevel: ZLevel, zlevel2: ZLevel2) {
+    private _insertLayer(
+        layer: Layer,
+        zlevel: ZLevel,
+        zlevel2: ZLevel2,
+        suppressDOMInsert: boolean
+    ) {
         const internal = this._i;
         const layersMap = internal.layers;
         const layerStack = internal.layerStack;
@@ -777,7 +787,7 @@ export default class CanvasPainter implements PainterBase {
         // Virtual layer will not directly show on the screen.
         // (It can be a WebGL layer and assigned to a ZRImage element)
         // But it still under management of zrender.
-        if (!layer.virtual) {
+        if (!suppressDOMInsert && !layer.virtual) {
             if (prevLayer) {
                 const prevDom = prevLayer.dom;
                 if (prevDom.nextSibling) {
