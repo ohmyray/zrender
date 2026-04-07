@@ -861,12 +861,7 @@ export default class CanvasPainter implements PainterBase {
     getLayers() {
         const layers: Record<string, Layer> = {};
         eachLayer(this._i, function (layer, zlevel, zlevel2) {
-            // This conversion is only for backward compatibility.
-            layers[
-                zlevel2 === ZLEVEL2_NORMAL_BELOW ? zlevel
-                : zlevel2 === ZLEVEL2_INCREMENTAL ? `${zlevel}.0${zlevel2}`
-                : `${zlevel}.${zlevel2}` // ZLEVEL2_NORMAL_ABOVE
-            ] = layer;
+            layers[`${zlevel}|${zlevel2}`] = layer;
         });
         return layers;
     }
