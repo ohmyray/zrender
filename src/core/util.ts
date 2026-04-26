@@ -1,5 +1,5 @@
 /* global: defineProperty */
-import { Dictionary, ArrayLike, KeyOfDistributive } from './types';
+import { Dictionary, ArrayLike, KeyOfDistributive, NullUndefined } from './types';
 import { GradientObject } from '../graphic/Gradient';
 import { ImagePatternObject } from '../graphic/Pattern';
 import { platformApi } from './platform';
@@ -201,6 +201,36 @@ export function extend<
         }
     }
     return target as T & S;
+}
+
+export function assignProps<
+    TSrc extends Dictionary<any>,
+    TCommonKey extends keyof TSrc
+>(
+    tar: NullUndefined,
+    src: TSrc,
+    props: readonly TCommonKey[]
+): Pick<TSrc, TCommonKey>;
+export function assignProps<
+    TTar extends Dictionary<any>,
+    TSrc extends Dictionary<any>,
+    TCommonKey extends keyof TSrc & keyof TTar
+>(
+    tar: TTar,
+    src: TSrc & { [P in TCommonKey]: TTar[P] },
+    props: readonly TCommonKey[]
+): TTar;
+export function assignProps(
+    tar: any,
+    src: any,
+    props: readonly string[]
+) {
+    tar = (tar || {});
+    for (let idx = 0; idx < props.length; idx++) {
+        const prop = props[idx];
+        tar[prop] = src[prop];
+    }
+    return tar;
 }
 
 export function defaults<
